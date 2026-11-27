@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Inkuiri - Kelompok 7</title>
+
+    <!-- Bootstrap dari CDN agar tampilan konsisten di semua browser -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- CSS buatan sendiri untuk komponen kustom (carousel & kartu mapel) -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- ============ BAGIAN JUDUL / HEADER ============ -->
+    <header class="py-5 text-center">
+        <div class="container">
+            <h1 class="display-5 fw-bold">Web Inkuiri</h1>
+            <p class="lead mb-0">Selamat datang di Web Inkuiri</p>
+        </div>
+    </header>
+
+    <main class="pengertian">
+    <h1 class="judulinkuiri">Apa itu Inkuiri Kolaboratif?</h1>
+    
+    <!-- Pembungkus gambar & teks keterangan -->
+    <div class="wadah-gambar float-end">
+        <img src="image/inkuiri.png" alt="Inkuiri Kolaboratif" class="img-fluid gambar-inkuiri" loading="lazy">
+        <div class="teks-hover">
+            <strong>Ilustrasi Inkuiri Kolaboratif</strong>
+            <p>Siswa berdiskusi dan bekerja sama memecahkan masalah secara aktif.</p>
+        </div>
+    </div>
+
+    <p class="penjelasan">Inkuiri kolaboratif adalah pendekatan pembelajaran yang mendorong siswa untuk bekerja sama dalam mengeksplorasi pertanyaan atau masalah yang kompleks, dengan tujuan mengembangkan keterampilan berpikir kritis dan pemecahan masalah.</p>
+
+    <p class="penjelasan">PAIBP: Menjadi landasan nilai, etika, dan moral dalam bekerja sama, mengolah data secara jujur, serta memecahkan masalah sesuai ajaran agama.</p>
+    <p class="penjelasan">Sejarah: Melatih kemampuan menyelidiki akar masalah dari peristiwa masa lalu untuk merancang solusi yang tepat bagi kondisi masa kini.</p>
+    <p class="penjelasan">Matematika: Berperan sebagai alat ukur dan logika dalam mengolah data, membaca statistik, serta menghitung solusi yang akurat.</p>
+    </main>
+
+
+<div class="game-description">
+  <div class="game-text">
+    <div class="judulgame">Game Edukasi Pemilahan Sampah 3D</div>
+    <p>Permainan interaktif berbasis 3D yang melatih pemain untuk memilah berbagai jenis sampah dengan cepat dan tepat sebelum waktu habis.</p>
+    <ul class="game-rules">
+      <li><strong>Tujuan Permainan:</strong> Memasukkan objek sampah yang muncul (seperti <em>Botol kaca</em>) ke dalam tong sampah yang sesuai.</li>
+      <li><strong>5 Kategori Tong Sampah:</strong> Organik (Hijau), Kertas (Biru), Plastik (Kuning), Logam &amp; Kaca (Oranye), dan B3 (Merah).</li>
+      <li><strong>Kontrol Mudah:</strong> Pemain dapat langsung mengklik tong sampah di layar atau menekan tombol angka <strong>1–5</strong> pada keyboard.</li>
+      <li><strong>Sistem Tantangan:</strong> Dilengkapi dengan penghitung skor, batas waktu permainan, serta sistem nyawa (3 hati) jika terjadi kesalahan atau kehabisan waktu.</li>
+    </ul>
+  </div>
+
+  <img src="image/game.png" alt="Tampilan antarmuka Game Edukasi Pemilahan Sampah 3D" class="game1" onclick="window.open('ecogame.html', '_blank')">
+</div>
+
+    <!-- ============ BAGIAN ANGGOTA KELOMPOK ============ -->
+    <main class="container py-5">
+        <h2 class="h3 text-center mb-4">Anggota Kelompok 7</h2>
+
+        <div class="row g-4">
+            <!-- Anggota 1 -->
+            <div class="col-12 col-md-6 col-lg-4">
+                <article class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h3 class="card-title h5">Nafian Daffa Aditama</h3>
+                        <p class="card-text">Salah satu anggota kelompok.</p>
+                    </div>
+                </article>
+            </div>
+
+            <!-- Anggota 2 -->
+            <div class="col-12 col-md-6 col-lg-4">
+                <article class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h3 class="card-title h5">Nizam Fathurrahman Al-Fatih</h3>
+                        <p class="card-text">Salah satu anggota kelompok.</p>
+                    </div>
+                </article>
+            </div>
+
+            <!-- Anggota 3 -->
+            <div class="col-12 col-md-6 col-lg-4">
+                <article class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h3 class="card-title h5">Muhammad Yagsya Khoirul Sapaat</h3>
+                        <p class="card-text">Salah satu anggota kelompok.</p>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </main>
+
+    <!-- ============ BAGIAN SOROTAN MATA PELAJARAN (CAROUSEL) ============ -->
+    <!-- Urutan slide dibuat sama dengan urutan kartu di bawah: PAIBP, Sejarah, Matematika -->
+    <section class="container py-4" aria-label="Sorotan mata pelajaran">
+        <div class="carousel-shell">
+            <div id="sorotanMapel" class="carousel slide carousel-fade" data-bs-ride="carousel" data-bs-interval="5000">
+
+                <!-- Tombol indikator di bawah carousel -->
+                <div class="carousel-indicators">
+                    <button type="button" data-bs-target="#sorotanMapel" data-bs-slide-to="0" class="active" aria-current="true" aria-label="PAIBP"></button>
+                    <button type="button" data-bs-target="#sorotanMapel" data-bs-slide-to="1" aria-label="Sejarah"></button>
+                    <button type="button" data-bs-target="#sorotanMapel" data-bs-slide-to="2" aria-label="Matematika"></button>
+                </div>
+
+                <!-- Isi carousel (tiap carousel-item = 1 slide) -->
+                <div class="carousel-inner">
+
+                    <!-- Slide PAIBP -->
+                    <div class="carousel-item active">
+                        <img src="image/paibp.jpg" class="d-block w-100" alt="Materi PAIBP" loading="lazy">
+                        <div class="carousel-caption">
+                            <span class="carousel-label">Belajar bersama</span>
+                            <h2>PAIBP</h2>
+                            <p>Menumbuhkan iman, takwa, dan akhlak mulia.</p>
+                            <a class="btn btn-light" href="yagsya part/index.html">Jelajahi mapel</a>
+                        </div>
+                    </div>
+
+                    <!-- Slide Sejarah -->
+                    <div class="carousel-item">
+                        <img src="image/sejarah.jpg" class="d-block w-100" alt="Materi Sejarah" loading="lazy">
+                        <div class="carousel-caption">
+                            <span class="carousel-label">Belajar bersama</span>
+                            <h2>Sejarah</h2>
+                            <p>Mengenal masa lalu untuk memahami masa depan.</p>
+                            <a class="btn btn-light" href="sejarah.html">Jelajahi mapel</a>
+                        </div>
+                    </div>
+
+                    <!-- Slide Matematika -->
+                    <div class="carousel-item">
+                        <img src="image/mtk.jpg" class="d-block w-100" alt="Materi Matematika" loading="lazy">
+                        <div class="carousel-caption">
+                            <span class="carousel-label">Belajar bersama</span>
+                            <h2>Matematika</h2>
+                            <p>Asah logika dan temukan solusi dari setiap tantangan.</p>
+                            <a class="btn btn-light" href="mtk.html">Jelajahi mapel</a>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Tombol panah kiri (sebelumnya) -->
+                <button class="carousel-control-prev" type="button" data-bs-target="#sorotanMapel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Sebelumnya</span>
+                </button>
+
+                <!-- Tombol panah kanan (berikutnya) -->
+                <button class="carousel-control-next" type="button" data-bs-target="#sorotanMapel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Berikutnya</span>
+                </button>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ BAGIAN DAFTAR MATA PELAJARAN ============ -->
+    <section class="container py-4" aria-labelledby="judul-mapel">
+        <h2 id="judul-mapel" class="h3 text-center mb-4">Mata Pelajaran</h2>
+
+        <div class="row g-4">
+
+            <!-- Kartu PAIBP -->
+            <div class="col-12 col-md-6 col-lg-4">
+                <article id="paibp" class="kartu-mapel h-100">
+                    <img src="image/paibp.jpg" alt="Materi PAIBP" loading="lazy">
+                    <div class="kartu-mapel-body">
+                        <h3>PAIBP</h3>
+                        <p>Membentuk keimanan, ketakwaan, serta akhlak mulia dalam beribadah dan berinteraksi sosial sehari-hari.</p>
+                        <a class="btn btn-primary mt-3" href="yagsya part/index.html" target="_blank" rel="noopener noreferrer">Paibp</a>
+                    </div>
+                </article>
+            </div>
+
+            <!-- Kartu Sejarah -->
+            <div class="col-12 col-md-6 col-lg-4">
+                <article id="sejarah" class="kartu-mapel h-100">
+                    <img src="image/sejarah.jpg" alt="Materi Sejarah" loading="lazy">
+                    <div class="kartu-mapel-body">
+                        <h3>Sejarah</h3>
+                        <p>Mempelajari peristiwa masa lalu dan perkembangan peradaban manusia untuk mengambil hikmah serta membangun masa depan yang lebih baik.</p>
+                        <a class="btn btn-primary mt-3" href="sejarah.html" target="_blank" rel="noopener noreferrer">Sejarah</a>
+                    </div>
+                </article>
+            </div>
+
+            <!-- Kartu Matematika -->
+            <div class="col-12 col-md-6 col-lg-4">
+                <article id="matematika" class="kartu-mapel h-100">
+                    <img src="image/mtk.jpg" alt="Materi Matematika" loading="lazy">
+                    <div class="kartu-mapel-body">
+                        <h3>Matematika</h3>
+                        <p>Melatih kemampuan berpikir logis dan pemecahan masalah melalui konsep angka, aljabar, geometri, serta analisis data.</p>
+                        <a class="btn btn-primary mt-3" href="mtk.html" target="_blank" rel="noopener noreferrer">Matematika</a>
+                    </div>
+                </article>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ============ BAGIAN FOOTER ============ -->
+    <footer class="py-3 text-center">
+        <p class="mb-0">&copy; 2026 Jurusan PPLG - Proyek Kolaborasi Hasil Belajar Pengelolaan Sampah</p>
+    </footer>
+
+    <!-- Script Bootstrap untuk mengaktifkan carousel -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

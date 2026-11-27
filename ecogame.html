@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Eco Hero — Sorting Sampah 3D</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0b1020; font-family: 'Segoe UI', 'Trebuchet MS', system-ui, sans-serif; color: #fff; }
+  #app { position: relative; width: 100vw; height: 100vh; }
+  #canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+
+  /* Overlay umum */
+  .overlay {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center;
+    background: radial-gradient(circle at 50% 40%, rgba(30,60,90,0.55), rgba(8,12,28,0.92));
+    backdrop-filter: blur(6px); z-index: 50; padding: 24px;
+  }
+  .hidden { display: none !important; }
+
+  /* Judul */
+  .title {
+    font-size: clamp(34px, 7vw, 64px); font-weight: 800; letter-spacing: 1px;
+    background: linear-gradient(90deg,#7be88a,#46c2ff,#ffd166);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    text-shadow: 0 6px 30px rgba(70,200,255,0.25);
+    margin-bottom: 8px;
+  }
+  .subtitle { font-size: clamp(14px, 2.5vw, 18px); opacity: 0.85; margin-bottom: 18px; max-width: 620px; line-height: 1.5; }
+
+  /* Legenda kategori */
+  .legend {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px; max-width: 760px; margin: 6px 0 18px; width: 100%;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 12px; font-size: 13px; text-align: left;
+  }
+  .legend-chip { width: 18px; height: 18px; border-radius: 5px; flex-shrink: 0; box-shadow: 0 0 10px rgba(0,0,0,0.4); }
+
+  /* Tombol */
+  .btn {
+    cursor: pointer; border: none; outline: none;
+    padding: 14px 38px; font-size: 18px; font-weight: 700; border-radius: 50px;
+    background: linear-gradient(135deg,#46c2ff,#7be88a); color: #06223a;
+    box-shadow: 0 8px 30px rgba(70,200,255,0.4); transition: transform 0.15s, box-shadow 0.15s;
+    user-select: none;
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(70,200,255,0.55); }
+  .btn:active { transform: translateY(0); }
+
+  /* HUD */
+  #hud { position: absolute; inset: 0; pointer-events: none; z-index: 20; }
+  .hud-pill {
+    position: absolute; top: 14px; padding: 10px 16px; border-radius: 14px;
+    background: rgba(8,16,30,0.62); border: 1px solid rgba(255,255,255,0.12);
+    font-size: 15px; font-weight: 700; backdrop-filter: blur(8px);
+    display: flex; align-items: center; gap: 8px;
+  }
+  #hud-score { left: 14px; }
+  #hud-timer { left: 50%; transform: translateX(-50%); }
+  #hud-lives { right: 14px; }
+  #hud-combo {
+    top: 70px; left: 50%; transform: translateX(-50%);
+    background: rgba(123,232,138,0.18); border-color: rgba(123,232,138,0.5);
+    color: #c5ffd0; opacity: 0; transition: opacity 0.2s;
+  }
+  .heart { color: #ff5a7a; font-size: 18px; }
+  .label { opacity: 0.7; font-weight: 600; font-size: 12px; }
+
+  /* Petunjuk kontrol di bawah */
+  #controls-hint {
+    position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+    background: rgba(8,16,30,0.5); padding: 8px 14px; border-radius: 10px;
+    font-size: 12px; opacity: 0.8; text-align: center; backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.08); pointer-events: none; z-index: 20;
+  }
+
+  /* Item label info */
+  #item-info {
+    position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
+    background: rgba(8,16,30,0.7); padding: 10px 18px; border-radius: 12px;
+    font-size: 14px; font-weight: 600; backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.12); z-index: 20; pointer-events: none;
+    text-align: center; min-width: 180px;
+  }
+  #item-info .small { font-size: 11px; opacity: 0.65; font-weight: 500; margin-top: 4px; }
+
+  /* Floating score popup */
+  .popup {
+    position: absolute; font-weight: 800; font-size: 22px; z-index: 30;
+    pointer-events: none; animation: floatUp 0.9s ease-out forwards;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+  }
+  @keyframes floatUp {
+    0% { transform: translate(-50%,0) scale(0.6); opacity: 0; }
+    20% { transform: translate(-50%,-10px) scale(1.1); opacity: 1; }
+    100% { transform: translate(-50%,-70px) scale(1); opacity: 0; }
+  }
+
+  /* Flash merah saat salah */
+  #flash {
+    position: absolute; inset: 0; background: rgba(255,40,70,0.0);
+    pointer-events: none; z-index: 25; transition: background 0.12s;
+  }
+  #flash.show { background: rgba(255,40,70,0.28); }
+
+  /* Game over */
+  .gameover-stat { font-size: 16px; margin: 6px 0; opacity: 0.92; }
+  .gameover-score { font-size: 48px; font-weight: 800; color: #ffd166; margin: 10px 0; }
+  .gameover-msg { font-size: 14px; opacity: 0.8; margin: 12px 0 20px; max-width: 480px; line-height: 1.5; }
+
+  /* Loader */
+  #loader { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: #0b1020; z-index: 100; }
+  #loader .spin { width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.15); border-top-color: #46c2ff; border-radius: 50%; animation: spin 0.9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Pesan kategori benar saat salah */
+  #correct-hint {
+    position: absolute; top: 110px; left: 50%; transform: translateX(-50%);
+    background: rgba(255,80,100,0.18); border: 1px solid rgba(255,80,100,0.5);
+    color: #ffd0d6; padding: 8px 14px; border-radius: 10px; font-size: 13px;
+    font-weight: 600; z-index: 22; opacity: 0; transition: opacity 0.2s; pointer-events: none;
+  }
+  #correct-hint.show { opacity: 1; }
+
+  @media (max-width: 600px) {
+    .legend { grid-template-columns: 1fr 1fr; }
+    #hud-timer { font-size: 13px; padding: 8px 12px; }
+    .hud-pill { font-size: 13px; padding: 8px 12px; }
+    #item-info { font-size: 12px; padding: 8px 12px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="canvas"></canvas>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div class="hud-pill" id="hud-score"><span class="label">SKOR</span><span id="score-val">0</span></div>
+    <div class="hud-pill" id="hud-timer"><span class="label">WAKTU</span><span id="timer-val">60</span>s</div>
+    <div class="hud-pill" id="hud-lives"><span class="label">NYAWA</span><span id="lives-val" style="letter-spacing:2px;">♥♥♥</span></div>
+    <div class="hud-pill" id="hud-combo"><span id="combo-val">Combo x1</span></div>
+    <div id="item-info">Klik tong yang benar<div class="small">atau tekan tombol 1–5</div></div>
+    <div id="correct-hint"></div>
+    <div id="controls-hint">Klik tong / tekan 1–5 • Organik, Kertas, Plastik, Logam&Kaca, B3</div>
+  </div>
+
+  <div id="flash"></div>
+
+  <!-- Start Screen -->
+  <div id="start-screen" class="overlay">
+    <div class="title">ECO HERO</div>
+    <div class="subtitle">Sorting Sampah 3D — Pilah sampah ke tong yang benar sebelum waktu habis. Belajar memilah sambil bermain!</div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-chip" style="background:#4caf50"></div>Organik — sisa makanan, daun, kulit buah</div>
+      <div class="legend-item"><div class="legend-chip" style="background:#2196f3"></div>Kertas — kertas, karton, koran</div>
+      <div class="legend-item"><div class="legend-chip" style="background:#ffc107"></div>Plastik — botol plastik, kantong</div>
+      <div class="legend-item"><div class="legend-chip" style="background:#ff9800"></div>Logam &amp; Kaca — kaleng, botol kaca, besi</div>
+      <div class="legend-item"><div class="legend-chip" style="background:#f44336"></div>B3 — baterai, lampu, obat</div>
+    </div>
+    <button class="btn" id="start-btn">MULAI</button>
+  </div>
+
+  <!-- Game Over -->
+  <div id="gameover-screen" class="overlay hidden">
+    <div class="title" style="font-size:clamp(28px,5vw,48px);">GAME OVER</div>
+    <div class="gameover-score" id="final-score">0</div>
+    <div class="gameover-stat">Benar: <span id="final-correct">0</span></div>
+    <div class="gameover-stat">Salah: <span id="final-wrong">0</span></div>
+    <div class="gameover-stat">Combo tertinggi: <span id="final-combo">0</span></div>
+    <div class="gameover-msg" id="final-message">Teruslah berlatih memilah sampah!</div>
+    <button class="btn" id="restart-btn">MAIN LAGI</button>
+  </div>
+
+  <!-- Loader -->
+  <div id="loader"><div class="spin"></div></div>
+</div>
+
+<!-- Three.js (local copy, v0.160.0) -->
+<script src="vendor/three/three.min.js"></script>
+
+<script>
+/* =========================================================
+   ECO HERO — Sorting Sampah 3D
+   Single-file game. Tidak butuh build.
+   ========================================================= */
+
+// ---------- Konfigurasi kategori & item ----------
+const CATEGORIES = [
+  { id: 0, name: 'Organik',        color: 0x4caf50, hex: '#4caf50' },
+  { id: 1, name: 'Kertas',         color: 0x2196f3, hex: '#2196f3' },
+  { id: 2, name: 'Plastik',        color: 0xffc107, hex: '#ffc107' },
+  { id: 3, name: 'Logam & Kaca',   color: 0xff9800, hex: '#ff9800' },
+  { id: 4, name: 'B3',             color: 0xf44336, hex: '#f44336' }
+];
+
+// 18 jenis item, masing-masing punya kategori benar
+const ITEMS = [
+  { name: 'Apel busuk',       cat: 0, geom: 'apple' },
+  { name: 'Pisang',           cat: 0, geom: 'banana' },
+  { name: 'Daun',             cat: 0, geom: 'leaf' },
+  { name: 'Kulit semangka',   cat: 0, geom: 'rind' },
+  { name: 'Tulang ikan',      cat: 0, geom: 'bone'  },
+  { name: 'Koran',            cat: 1, geom: 'paper' },
+  { name: 'Kardus',           cat: 1, geom: 'box' },
+  { name: 'Kertas HVS',       cat: 1, geom: 'paper' },
+  { name: 'Majalah',          cat: 1, geom: 'magazine' },
+  { name: 'Botol plastik',    cat: 2, geom: 'bottle' },
+  { name: 'Kantong plastik',  cat: 2, geom: 'bag' },
+  { name: 'Galon air',        cat: 2, geom: 'jug' },
+  { name: 'Kaleng soda',      cat: 3, geom: 'can' },
+  { name: 'Botol kaca',       cat: 3, geom: 'glassbottle' },
+  { name: 'Paku besi',        cat: 3, geom: 'nail' },
+  { name: 'Baterai',          cat: 4, geom: 'battery' },
+  { name: 'Lampu bohlam',     cat: 4, geom: 'bulb' },
+  { name: 'Obat-obatan',      cat: 4, geom: 'pill' }
+];
+
+// ---------- State permainan ----------
+const State = {
+  running: false,
+  score: 0,
+  lives: 3,
+  timeLeft: 60,
+  combo: 0,
+  bestCombo: 0,
+  correctCount: 0,
+  wrongCount: 0,
+  spawnInterval: 2.2,   // detik antar item, menurun
+  minSpawn: 0.9,
+  timeSinceSpawn: 0,
+  currentItem: null,    // objek {mesh, def, index}
+  difficultyTimer: 0
+};
+
+// ---------- Variabel global Three.js ----------
+let scene, camera, renderer, clock;
+let bins = [];           // 5 group tong
+let activeItem = null;   // referensi mesh item aktif
+let activeItemDef = null;
+let particles = [];      // sistem partikel sederhana
+let raycaster, pointer;
+let binPositions = [];   // posisi world untuk tiap tong (x,z)
+let skyMesh = null;
+let disposedObjects = []; // untuk cleanup
+
+// Audio
+let audioCtx = null;
+
+// DOM refs
+const $ = (id) => document.getElementById(id);
+const canvas = $('canvas');
+
+// ---------- Inisialisasi audio (lazy) ----------
+function ensureAudio() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch(e) { audioCtx = null; }
+  }
+}
+function beep(freq=660, dur=0.12, type='sine', vol=0.15) {
+  if (!audioCtx) return;
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.value = vol;
+  o.connect(g); g.connect(audioCtx.destination);
+  const t = audioCtx.currentTime;
+  o.start(t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.stop(t + dur + 0.02);
+}
+function playCorrect() { beep(880,0.10,'sine',0.18); setTimeout(()=>beep(1320,0.10,'sine',0.15),70); }
+function playWrong()  { beep(200,0.18,'sawtooth',0.18); setTimeout(()=>beep(150,0.18,'sawtooth',0.15),60); }
+
+// ---------- Membuat label teks (canvas texture) ----------
+function makeLabelTexture(text, bg='rgba(0,0,0,0)') {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 64;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0,0,256,64);
+  ctx.font = 'bold 34px Segoe UI, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+  ctx.strokeText(text, 128, 36);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(text, 128, 36);
+  const tex = new THREE.CanvasTexture(c);
+  tex.anisotropy = 4;
+  return tex;
+}
+function makeBinTexture(label, colorHex) {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 128;
+  const ctx = c.getContext('2d');
+  // latar
+  ctx.fillStyle = colorHex;
+  ctx.fillRect(0,0,256,128);
+  // strip putih
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.fillRect(0, 70, 256, 60);
+  // teks
+  ctx.fillStyle = '#0b1020';
+  ctx.font = 'bold 40px Segoe UI, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(label, 128, 100);
+  const tex = new THREE.CanvasTexture(c);
+  tex.anisotropy = 4;
+  return tex;
+}
+
+// ---------- Buat tong sampah ----------
+function createBin(category, index, total) {
+  const group = new THREE.Group();
+  const color = category.color;
+
+  // bahan
+  const bodyMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.55, metalness: 0.15 });
+  const lidMat  = new THREE.MeshStandardMaterial({ color: color, roughness: 0.45, metalness: 0.25 });
+
+  // badan silinder
+  const bodyGeo = new THREE.CylinderGeometry(0.7, 0.6, 1.3, 24);
+  const body = new THREE.Mesh(bodyGeo, bodyMat);
+  body.position.y = 0.65; body.castShadow = true; body.receiveShadow = true;
+  group.add(body);
+
+  // Papan label datar di depan tong (sisi yang menghadap target/kamera)
+  // Catatan: lookAt() membuat sumbu -Z menghadap target, jadi plate di -Z
+  const labelTex = makeBinTexture(category.name, category.hex);
+  const plateMat = new THREE.MeshStandardMaterial({ map: labelTex, roughness: 0.6, side: THREE.DoubleSide });
+  const plate = new THREE.Mesh(new THREE.PlaneGeometry(1.15, 0.42), plateMat);
+  plate.position.set(0, 0.75, -0.71); // sisi depan tong (menghadap kamera)
+  plate.castShadow = false; plate.receiveShadow = false;
+  group.add(plate);
+
+  // dasar dalam (gelap)
+  const baseGeo = new THREE.CylinderGeometry(0.58, 0.58, 0.05, 24);
+  const base = new THREE.Mesh(baseGeo, new THREE.MeshStandardMaterial({color:0x222831, roughness:0.9}));
+  base.position.y = 0.02; group.add(base);
+
+  // tutup (sedikit cekung)
+  const lidGeo = new THREE.CylinderGeometry(0.72, 0.7, 0.12, 24);
+  const lid = new THREE.Mesh(lidGeo, lidMat);
+  lid.position.y = 1.38; lid.castShadow = true;
+  group.add(lid);
+
+  // pegangan tutup
+  const handleGeo = new THREE.TorusGeometry(0.12, 0.04, 8, 16, Math.PI);
+  const handle = new THREE.Mesh(handleGeo, new THREE.MeshStandardMaterial({color:0x1a1f2e, roughness:0.6}));
+  handle.position.set(0, 1.45, 0); handle.rotation.x = Math.PI/2; handle.rotation.z = Math.PI;
+  group.add(handle);
+
+  // Label teks melayang di atas tong
+  const floatTex = makeLabelTexture(category.name);
+  const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: floatTex, transparent: true, depthTest: false }));
+  label.scale.set(1.4, 0.36, 1);
+  label.position.y = 2.1;
+  group.add(label);
+
+  // Nomor tong (1-5) kecil
+  const numTex = makeLabelTexture(String(index+1));
+  const numSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: numTex, transparent: true, depthTest:false }));
+  numSprite.scale.set(0.5, 0.5, 1);
+  numSprite.position.set(0, 2.55, 0);
+  group.add(numSprite);
+
+  group.userData = { category: category, index: index, baseY: 0, hover: 0 };
+  return group;
+}
+
+// ---------- Letakkan tong dalam setengah lingkaran ----------
+function createBins() {
+  const total = CATEGORIES.length;
+  const radius = 4.6;
+  for (let i=0;i<total;i++) {
+    // sebar dari -75° sampai +75°
+    const t = (i / (total-1));
+    const ang = (-75 + t*150) * Math.PI/180;
+    const x = Math.sin(ang) * radius;
+    const z = -Math.cos(ang) * radius + 1.5;
+    const bin = createBin(CATEGORIES[i], i, total);
+    bin.position.set(x, 0, z);
+    bin.lookAt(0, 0.8, 1.5); // hadap ke arah item
+    scene.add(bin);
+    bins.push(bin);
+    binPositions.push(new THREE.Vector3(x, 0, z));
+  }
+}
+
+// ---------- Membuat geometri item sampah ----------
+function buildItemGeometry(type) {
+  // mengembalikan THREE.Group berisi mesh-mesh item
+  const g = new THREE.Group();
+  let mat;
+  switch(type) {
+    case 'apple': {
+      mat = new THREE.MeshStandardMaterial({color:0xd94f4f, roughness:0.4});
+      const m = new THREE.Mesh(new THREE.SphereGeometry(0.28, 16, 16), mat);
+      m.castShadow = true; g.add(m);
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,0.12,8), new THREE.MeshStandardMaterial({color:0x5d3a1a}));
+      stem.position.y = 0.3; g.add(stem);
+      break;
+    }
+    case 'banana': {
+      mat = new THREE.MeshStandardMaterial({color:0xffe14d, roughness:0.5});
+      const m = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.4, 6, 12), mat);
+      m.rotation.z = Math.PI/3; m.castShadow = true; g.add(m);
+      break;
+    }
+    case 'leaf': {
+      mat = new THREE.MeshStandardMaterial({color:0x4caf50, roughness:0.6, side:THREE.DoubleSide});
+      const m = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 8), mat);
+      m.scale.set(1, 0.15, 0.55); m.castShadow = true; g.add(m);
+      break;
+    }
+    case 'rind': {
+      mat = new THREE.MeshStandardMaterial({color:0x3fa34d, roughness:0.55});
+      const m = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.12, 10, 18, Math.PI*1.4), mat);
+      m.castShadow = true; g.add(m);
+      break;
+    }
+    case 'bone': {
+      mat = new THREE.MeshStandardMaterial({color:0xf2e6d8, roughness:0.7});
+      const m1 = new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.34, 4, 8), mat);
+      m1.rotation.z = Math.PI/2; m1.castShadow = true; g.add(m1);
+      const b1 = new THREE.Mesh(new THREE.SphereGeometry(0.1,8,8), mat); b1.position.set(0.2,0.07,0); g.add(b1);
+      const b2 = new THREE.Mesh(new THREE.SphereGeometry(0.1,8,8), mat); b2.position.set(0.2,-0.07,0); g.add(b2);
+      const b3 = new THREE.Mesh(new THREE.SphereGeometry(0.1,8,8), mat); b3.position.set(-0.2,0.07,0); g.add(b3);
+      const b4 = new THREE.Mesh(new THREE.SphereGeometry(0.1,8,8), mat); b4.position.set(-0.2,-0.07,0); g.add(b4);
+      break;
+    }
+    case 'paper': {
+      mat = new THREE.MeshStandardMaterial({color:0xf5f1e3, roughness:0.85, side:THREE.DoubleSide});
+      const m = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.02, 0.65), mat);
+      m.rotation.x = -0.08; m.castShadow = true; g.add(m);
+      // garis tinta
+      const ink = new THREE.Mesh(new THREE.BoxGeometry(0.42,0.005,0.02), new THREE.MeshStandardMaterial({color:0x333}));
+      ink.position.set(0,0.015,0.15); g.add(ink);
+      break;
+    }
+    case 'box': {
+      mat = new THREE.MeshStandardMaterial({color:0xc89b5a, roughness:0.8});
+      const m = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.4, 0.45), mat);
+      m.castShadow = true; g.add(m);
+      const tape = new THREE.Mesh(new THREE.BoxGeometry(0.56,0.41,0.05), new THREE.MeshStandardMaterial({color:0xe5d3a3}));
+      tape.position.z = 0; g.add(tape);
+      break;
+    }
+    case 'magazine': {
+      mat = new THREE.MeshStandardMaterial({color:0xe74c8b, roughness:0.7});
+      const m = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.45, 0.06), mat);
+      m.castShadow = true; g.add(m);
+      break;
+    }
+    case 'bottle': {
+      mat = new THREE.MeshStandardMaterial({color:0x9ad0ff, roughness:0.25, metalness:0.1, transparent:true, opacity:0.85});
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, 0.55, 16), mat);
+      m.castShadow = true; g.add(m);
+      const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.08,0.15,12), mat); neck.position.y=0.35; g.add(neck);
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.055,0.055,0.06,12), new THREE.MeshStandardMaterial({color:0x2e7dff})); cap.position.y=0.45; g.add(cap);
+      break;
+    }
+    case 'bag': {
+      mat = new THREE.MeshStandardMaterial({color:0xcfe3ff, roughness:0.6, side:THREE.DoubleSide, transparent:true, opacity:0.7});
+      const m = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.45, 0.02), mat);
+      m.castShadow = true; g.add(m);
+      break;
+    }
+    case 'jug': {
+      mat = new THREE.MeshStandardMaterial({color:0xaad4ff, roughness:0.35, transparent:true, opacity:0.85});
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 0.7, 16), mat);
+      m.castShadow = true; g.add(m);
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,0.08,12), new THREE.MeshStandardMaterial({color:0x2e7dff})); cap.position.y=0.42; g.add(cap);
+      const handle = new THREE.Mesh(new THREE.TorusGeometry(0.12,0.035,8,16,Math.PI), new THREE.MeshStandardMaterial({color:0x2e7dff}));
+      handle.position.set(0.25,0.15,0); handle.rotation.y=Math.PI/2; g.add(handle);
+      break;
+    }
+    case 'can': {
+      mat = new THREE.MeshStandardMaterial({color:0xe53935, roughness:0.35, metalness:0.5});
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.4, 18), mat);
+      m.castShadow = true; g.add(m);
+      const top = new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.13,0.02,18), new THREE.MeshStandardMaterial({color:0xb0b0b0, metalness:0.8, roughness:0.3}));
+      top.position.y=0.21; g.add(top);
+      break;
+    }
+    case 'glassbottle': {
+      mat = new THREE.MeshStandardMaterial({color:0x6bd17b, roughness:0.15, metalness:0.1, transparent:true, opacity:0.8});
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.18,0.55,16), mat);
+      m.castShadow = true; g.add(m);
+      const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.1,0.18,12), mat); neck.position.y=0.36; g.add(neck);
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.055,0.055,0.06,12), new THREE.MeshStandardMaterial({color:0x222})); cap.position.y=0.48; g.add(cap);
+      break;
+    }
+    case 'nail': {
+      mat = new THREE.MeshStandardMaterial({color:0x9aa0a8, metalness:0.85, roughness:0.3});
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,0.55,10), mat);
+      m.rotation.z = Math.PI/2.4; m.castShadow = true; g.add(m);
+      const head = new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.09,0.04,12), mat);
+      head.position.set(-0.18,0.08,0); head.rotation.z = Math.PI/2.4; g.add(head);
+      break;
+    }
+    case 'battery': {
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,0.4,16), new THREE.MeshStandardMaterial({color:0x9c27b0, roughness:0.4}));
+      body.castShadow = true; g.add(body);
+      const top = new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,0.06,12), new THREE.MeshStandardMaterial({color:0xdddddd, metalness:0.7}));
+      top.position.y = 0.23; g.add(top);
+      const label = new THREE.Mesh(new THREE.CylinderGeometry(0.082,0.082,0.22,16,1,true), new THREE.MeshStandardMaterial({color:0xffd54f}));
+      label.position.y = -0.05; g.add(label);
+      break;
+    }
+    case 'bulb': {
+      const glass = new THREE.Mesh(new THREE.SphereGeometry(0.18, 18, 18), new THREE.MeshStandardMaterial({color:0xfff7c2, roughness:0.15, transparent:true, opacity:0.55, emissive:0xfff3a0, emissiveIntensity:0.25}));
+      glass.castShadow = true; g.add(glass);
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,0.18,14), new THREE.MeshStandardMaterial({color:0x888, metalness:0.7}));
+      base.position.y = -0.25; g.add(base);
+      // filament
+      const fil = new THREE.Mesh(new THREE.TorusGeometry(0.04,0.01,6,10), new THREE.MeshStandardMaterial({color:0xffaa55, emissive:0xff8800, emissiveIntensity:0.6}));
+      fil.position.y = 0; fil.rotation.x = Math.PI/2; g.add(fil);
+      break;
+    }
+    case 'pill': {
+      // blister pack: datar dengan beberapa bola kecil
+      const card = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.04, 0.3), new THREE.MeshStandardMaterial({color:0xf0a020, roughness:0.7}));
+      card.castShadow = true; g.add(card);
+      const pillMat = new THREE.MeshStandardMaterial({color:0xffffff, roughness:0.4});
+      for (let i=0;i<4;i++) for (let j=0;j<3;j++) {
+        const p = new THREE.Mesh(new THREE.SphereGeometry(0.035,8,8), pillMat);
+        p.position.set(-0.13 + i*0.087, 0.045, -0.08 + j*0.08);
+        g.add(p);
+      }
+      break;
+    }
+    default: {
+      mat = new THREE.MeshStandardMaterial({color:0x888888});
+      const m = new THREE.Mesh(new THREE.BoxGeometry(0.3,0.3,0.3), mat);
+      m.castShadow = true; g.add(m);
+    }
+  }
+  return g;
+}
+
+// ---------- Spawn item baru ----------
+function spawnItem() {
+  // Jika masih ada item aktif (mis. masih terbang ke tong), biarkan saja —
+  // jangan dihukum, karena pemain sudah menjawab. Cukup ganti referensi.
+  if (activeItem && !activeItem.userData.flying) {
+    // item belum dijawab dan masih idle → dianggap lewat tanpa dijawab
+    removeActiveItem(false);
+    if (State.running) handleUnanswered();
+  }
+  const def = ITEMS[Math.floor(Math.random()*ITEMS.length)];
+  const item = buildItemGeometry(def.geom);
+  item.position.set(0, 1.7, 0.5);
+  item.scale.set(1.2,1.2,1.2);
+  item.userData = { def: def, spawnTime: performance.now() };
+  scene.add(item);
+  activeItem = item;
+  activeItemDef = def;
+
+  // update label info
+  $('item-info').innerHTML = `${def.name}<div class="small">Pilih tong yang benar (1–5 atau klik)</div>`;
+}
+
+function removeActiveItem(playSfx=true) {
+  if (activeItem) {
+    disposeObject(activeItem);
+    scene.remove(activeItem);
+    activeItem = null;
+    activeItemDef = null;
+  }
+}
+
+// ---------- Mengecek & menerapkan sort ----------
+function sortToBin(binIndex) {
+  if (!State.running || !activeItem || !activeItemDef) return;
+  const bin = bins[binIndex];
+  const correctCat = activeItemDef.cat;
+  const chosenCat = bin.userData.category.id;
+
+  if (correctCat === chosenCat) {
+    handleCorrect(bin);
+  } else {
+    handleWrong(bin, correctCat);
+  }
+}
+
+function handleCorrect(bin) {
+  State.combo++;
+  State.bestCombo = Math.max(State.bestCombo, State.combo);
+  const bonus = State.combo >= 3 ? Math.min(State.combo*2, 30) : 0;
+  const points = 10 + bonus;
+  State.score += points;
+  State.correctCount++;
+
+  playCorrect();
+  spawnParticles(bin.position.clone().add(new THREE.Vector3(0,1.4,0)), 0x7be88a, 28);
+
+  // animasi item terbang ke tong
+  flyItemToBin(bin, true);
+
+  showPopup(`+${points}`, '#7be88a', bin.position);
+  showCombo();
+  updateHUD();
+}
+
+function handleWrong(bin, correctCat) {
+  State.combo = 0;
+  State.score = Math.max(0, State.score - 5);
+  State.lives--;
+  State.wrongCount++;
+
+  playWrong();
+  flashRed();
+  if (bin) spawnParticles(bin.position.clone().add(new THREE.Vector3(0,1.4,0)), 0xff5a7a, 16);
+
+  // tampilkan kategori benar
+  const cat = CATEGORIES[correctCat !== undefined ? correctCat : activeItemDef.cat];
+  const hint = $('correct-hint');
+  hint.textContent = `Salah! "${activeItemDef ? activeItemDef.name : ''}" seharusnya ke: ${cat.name}`;
+  hint.classList.add('show');
+  setTimeout(()=>hint.classList.remove('show'), 1800);
+
+  flyItemToBin(bin, false);
+  showPopup('-5', '#ff5a7a', bin ? bin.position : new THREE.Vector3(0,1.5,0.5));
+  showCombo();
+  updateHUD();
+
+  if (State.lives <= 0) {
+    setTimeout(()=>gameOver(), 600);
+  }
+}
+
+// dipanggil saat item lewat tanpa dijawab
+function handleUnanswered() {
+  if (!activeItem || !State.running) return;
+  State.combo = 0;
+  State.lives--;
+  State.wrongCount++;
+  playWrong();
+  flashRed();
+  const hint = $('correct-hint');
+  hint.textContent = `Waktu habis! "${activeItemDef.name}" → ${CATEGORIES[activeItemDef.cat].name}`;
+  hint.classList.add('show');
+  setTimeout(()=>hint.classList.remove('show'), 1800);
+  removeActiveItem(false);
+  showCombo();
+  updateHUD();
+  if (State.lives <= 0) setTimeout(()=>gameOver(), 300);
+}
+
+// ---------- Animasi item terbang ke tong ----------
+function flyItemToBin(bin, correct) {
+  if (!activeItem) return;
+  const item = activeItem;
+  const target = bin ? bin.position.clone().add(new THREE.Vector3(0,1.35,0)) : new THREE.Vector3(0,-2,0.5);
+  const startPos = item.position.clone();
+  const startRot = item.rotation.clone();
+  const t0 = performance.now();
+  const dur = 450;
+  item.userData.flying = true;
+
+  function step() {
+    if (!item.parent) return; // sudah dibuang
+    const t = Math.min(1, (performance.now()-t0)/dur);
+    const e = 1 - Math.pow(1-t, 3);
+    item.position.lerpVectors(startPos, target, e);
+    item.position.y += Math.sin(t*Math.PI) * (correct?1.1:0.4); // ark
+    item.rotation.x = startRot.x + t*Math.PI*2;
+    item.rotation.y = startRot.y + t*Math.PI*1.5;
+    item.scale.setScalar(1.2 * (1 - 0.4*t));
+    if (t<1) requestAnimationFrame(step);
+    else {
+      disposeObject(item);
+      if (item.parent) item.parent.remove(item);
+      if (item === activeItem) { activeItem = null; activeItemDef = null; }
+    }
+  }
+  step();
+}
+
+// ---------- Sistem partikel sederhana ----------
+function spawnParticles(pos, color, count=20) {
+  const group = new THREE.Group();
+  group.position.copy(pos);
+  const mat = new THREE.MeshBasicMaterial({ color: color, transparent:true, opacity:1 });
+  for (let i=0;i<count;i++) {
+    const s = 0.05 + Math.random()*0.08;
+    const p = new THREE.Mesh(new THREE.SphereGeometry(s, 6, 6), mat);
+    const dir = new THREE.Vector3((Math.random()-0.5)*2, Math.random()*1.5+0.3, (Math.random()-0.5)*2).normalize();
+    const speed = 2 + Math.random()*3;
+    p.userData = { vel: dir.multiplyScalar(speed), life: 0, max: 0.7 + Math.random()*0.4 };
+    group.add(p);
+  }
+  scene.add(group);
+  particles.push(group);
+}
+
+function updateParticles(dt) {
+  for (let i=particles.length-1; i>=0; i--) {
+    const g = particles[i];
+    g.userData = g.userData || { age:0 };
+    g.userData.age = (g.userData.age||0) + dt;
+    let alive = false;
+    for (const p of g.children) {
+      p.userData.life += dt;
+      if (p.userData.life < p.userData.max) {
+        p.position.addScaledVector(p.userData.vel, dt);
+        p.userData.vel.y -= 6*dt; // gravitasi
+        p.material.opacity = 1 - (p.userData.life / p.userData.max);
+        p.scale.setScalar(1 - (p.userData.life / p.userData.max)*0.7);
+        alive = true;
+      } else {
+        p.visible = false;
+      }
+    }
+    if (!alive) {
+      disposeObject(g);
+      scene.remove(g);
+      particles.splice(i,1);
+    }
+  }
+}
+
+// ---------- Efek visual ----------
+function flashRed() {
+  const f = $('flash');
+  f.classList.add('show');
+  setTimeout(()=>f.classList.remove('show'), 140);
+  // shake kamera
+  cameraShake = 0.35;
+}
+let cameraShake = 0;
+
+function showPopup(text, color, worldPos) {
+  // konversi world ke screen
+  const v = worldPos.clone();
+  v.y += 2.0;
+  v.project(camera);
+  const x = (v.x*0.5+0.5)*window.innerWidth;
+  const y = (-v.y*0.5+0.5)*window.innerHeight;
+  const el = document.createElement('div');
+  el.className = 'popup';
+  el.style.color = color;
+  el.style.left = x+'px';
+  el.style.top = y+'px';
+  el.textContent = text;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(), 900);
+}
+
+function showCombo() {
+  const c = $('hud-combo');
+  if (State.combo >= 2) {
+    $('combo-val').textContent = `Combo x${State.combo}!`;
+    c.style.opacity = '1';
+    clearTimeout(c._t);
+    c._t = setTimeout(()=>{ c.style.opacity = '0'; }, 1500);
+  } else {
+    c.style.opacity = '0';
+  }
+}
+
+// ---------- HUD ----------
+function updateHUD() {
+  $('score-val').textContent = State.score;
+  $('timer-val').textContent = Math.max(0, Math.ceil(State.timeLeft));
+  // nyawa sebagai hati
+  let h = '';
+  for (let i=0;i<3;i++) h += i < State.lives ? '♥' : '♡';
+  $('lives-val').textContent = h;
+}
+
+// ---------- Game Over ----------
+function gameOver() {
+  if (!State.running) return;
+  State.running = false;
+  $('final-score').textContent = State.score;
+  $('final-correct').textContent = State.correctCount;
+  $('final-wrong').textContent = State.wrongCount;
+  $('final-combo').textContent = State.bestCombo;
+
+  // pesan edukatif berdasarkan performa
+  let msg;
+  const total = State.correctCount + State.wrongCount;
+  const acc = total>0 ? (State.correctCount/total) : 0;
+  if (acc >= 0.85) msg = 'Hebat! Kamu sudah jadi Eco Hero sejati. Teruskan kebiasaan memilah sampah di kehidupan nyata!';
+  else if (acc >= 0.6) msg = 'Bagus! Sedikit lagi untuk jadi ahli pemilahan sampah. Ingat: organik hijau, kertas biru, plastik kuning, logam&kaca oranye, B3 merah.';
+  else msg = 'Jangan menyerah! Pilah sampah dari rumah. Sampah yang dipilah dengan benar bisa didaur ulang dan menjaga bumi.';
+  $('final-message').textContent = msg;
+
+  $('hud').classList.add('hidden');
+  $('gameover-screen').classList.remove('hidden');
+
+  // buang item aktif
+  if (activeItem) removeActiveItem(false);
+}
+
+// ---------- Restart ----------
+function restartGame() {
+  // bersihkan item & partikel tersisa
+  if (activeItem) removeActiveItem(false);
+  for (const g of particles) { disposeObject(g); scene.remove(g); }
+  particles = [];
+
+  State.score = 0;
+  State.lives = 3;
+  State.timeLeft = 60;
+  State.combo = 0;
+  State.bestCombo = 0;
+  State.correctCount = 0;
+  State.wrongCount = 0;
+  State.spawnInterval = 2.2;
+  State.timeSinceSpawn = 0;
+  State.difficultyTimer = 0;
+
+  $('gameover-screen').classList.add('hidden');
+  $('start-screen').classList.add('hidden');
+  $('hud').classList.remove('hidden');
+  updateHUD();
+
+  State.running = true;
+  clock = new THREE.Clock();
+  spawnItem();
+}
+
+// ---------- Inisialisasi scene ----------
+function initScene() {
+  scene = new THREE.Scene();
+  scene.fog = new THREE.Fog(0x9fd8ff, 18, 45);
+
+  camera = new THREE.PerspectiveCamera(55, window.innerWidth/window.innerHeight, 0.1, 200);
+  camera.position.set(0, 3.2, 6.5);
+  camera.lookAt(0, 1.2, 0);
+
+  renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+  // Sky gradient (sphere dengan gradient texture)
+  const skyGeo = new THREE.SphereGeometry(80, 32, 16);
+  const skyMat = new THREE.ShaderMaterial({
+    side: THREE.BackSide,
+    uniforms: {
+      topColor:    { value: new THREE.Color(0x3a7bd5) },
+      bottomColor: { value: new THREE.Color(0xcfeaff) },
+      offset:      { value: 12 },
+      exponent:    { value: 0.7 }
+    },
+    vertexShader: `
+      varying vec3 vWorldPos;
+      void main() {
+        vec4 wp = modelMatrix * vec4(position, 1.0);
+        vWorldPos = wp.xyz;
+        gl_Position = projectionMatrix * viewMatrix * wp;
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 topColor;
+      uniform vec3 bottomColor;
+      uniform float offset;
+      uniform float exponent;
+      varying vec3 vWorldPos;
+      void main() {
+        float h = normalize(vWorldPos + vec3(0.0, offset, 0.0)).y;
+        float t = max(pow(max(h,0.0), exponent), 0.0);
+        gl_FragColor = vec4(mix(bottomColor, topColor, t), 1.0);
+      }
+    `
+  });
+  skyMesh = new THREE.Mesh(skyGeo, skyMat);
+  scene.add(skyMesh);
+
+  // Cahaya
+  const hemi = new THREE.HemisphereLight(0xcfeaff, 0x4a6a3a, 0.65);
+  scene.add(hemi);
+
+  const ambient = new THREE.AmbientLight(0xffffff, 0.35);
+  scene.add(ambient);
+
+  const sun = new THREE.DirectionalLight(0xfff2d8, 1.15);
+  sun.position.set(6, 12, 6);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.camera.left = -12;
+  sun.shadow.camera.right = 12;
+  sun.shadow.camera.top = 12;
+  sun.shadow.camera.bottom = -12;
+  sun.shadow.camera.near = 0.5;
+  sun.shadow.camera.far = 40;
+  sun.shadow.bias = -0.0005;
+  scene.add(sun);
+
+  // Lantai (rumput)
+  const grass = new THREE.Mesh(
+    new THREE.CircleGeometry(14, 64),
+    new THREE.MeshStandardMaterial({ color: 0x4f8f3a, roughness: 0.95 })
+  );
+  grass.rotation.x = -Math.PI/2;
+  grass.position.y = 0;
+  grass.receiveShadow = true;
+  scene.add(grass);
+
+  // Grid halus
+  const grid = new THREE.GridHelper(28, 28, 0x88c97a, 0x6aa85a);
+  grid.material.opacity = 0.25; grid.material.transparent = true;
+  grid.position.y = 0.01;
+  scene.add(grid);
+
+  // Platform tengah (penanda spawn)
+  const plat = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.9, 1.0, 0.15, 32),
+    new THREE.MeshStandardMaterial({ color: 0x6d4c41, roughness:0.9 })
+  );
+  plat.position.set(0, 0.075, 0.5);
+  plat.receiveShadow = true; plat.castShadow = true;
+  scene.add(plat);
+
+  // Dekorasi: beberapa pohon/pohon kecil di sekitar
+  for (let i=0;i<8;i++) {
+    const a = (i/8)*Math.PI*2 + 0.3;
+    const r = 9 + Math.random()*2;
+    const tx = Math.cos(a)*r, tz = Math.sin(a)*r;
+    addTree(tx, tz);
+  }
+
+  // Clouds
+  for (let i=0;i<6;i++) {
+    const c = makeCloud();
+    c.position.set((Math.random()-0.5)*40, 8+Math.random()*4, (Math.random()-0.5)*40);
+    scene.add(c);
+  }
+
+  // Buat tong
+  createBins();
+
+  raycaster = new THREE.Raycaster();
+  pointer = new THREE.Vector2();
+  clock = new THREE.Clock();
+}
+
+function addTree(x,z) {
+  const g = new THREE.Group();
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.18,0.25,1.4,10),
+    new THREE.MeshStandardMaterial({color:0x6d4c41, roughness:0.9})
+  );
+  trunk.position.y = 0.7; trunk.castShadow = true; trunk.receiveShadow = true;
+  g.add(trunk);
+  const leavesMat = new THREE.MeshStandardMaterial({color:0x3f9b4a, roughness:0.8});
+  for (let i=0;i<3;i++) {
+    const c = new THREE.Mesh(new THREE.SphereGeometry(0.7-i*0.12, 12, 12), leavesMat);
+    c.position.y = 1.5 + i*0.45; c.castShadow = true;
+    g.add(c);
+  }
+  g.position.set(x,0,z);
+  g.scale.setScalar(0.7 + Math.random()*0.5);
+  scene.add(g);
+}
+
+function makeCloud() {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({color:0xffffff, roughness:1, emissive:0xddeeff, emissiveIntensity:0.1, transparent:true, opacity:0.9});
+  for (let i=0;i<5;i++) {
+    const s = 0.6 + Math.random()*0.7;
+    const m = new THREE.Mesh(new THREE.SphereGeometry(s, 10, 10), mat);
+    m.position.set((Math.random()-0.5)*1.6, (Math.random()-0.5)*0.4, (Math.random()-0.5)*1.2);
+    g.add(m);
+  }
+  return g;
+}
+
+// ---------- Input handling ----------
+let isOrbiting = false;
+let orbitStart = {x:0,y:0};
+let camYaw = 0, camPitch = 0;
+const camBase = { y: 3.2, dist: 6.5 };
+
+function onPointerDown(e) {
+  if (!State.running) return;
+  const x = e.clientX, y = e.clientY;
+  // cek apakah klik pada tong
+  pointer.x = (x / window.innerWidth) * 2 - 1;
+  pointer.y = -(y / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+
+  // cari tong yang diklik
+  const hits = raycaster.intersectObjects(bins, true);
+  if (hits.length > 0) {
+    // naik group ke root bin
+    let obj = hits[0].object;
+    while (obj.parent && !bins.includes(obj)) obj = obj.parent;
+    const idx = bins.indexOf(obj);
+    if (idx >= 0) {
+      sortToBin(idx);
+      return;
+    }
+  }
+  // mulai orbit
+  isOrbiting = true;
+  orbitStart = {x, y};
+}
+function onPointerMove(e) {
+  if (!isOrbiting) return;
+  const dx = e.clientX - orbitStart.x;
+  camYaw -= dx * 0.005;
+  camYaw = Math.max(-0.7, Math.min(0.7, camYaw));
+  orbitStart = {x: e.clientX, y: e.clientY};
+}
+function onPointerUp() { isOrbiting = false; }
+
+function onKeyDown(e) {
+  if (!State.running) return;
+  const k = e.key;
+  if (k >= '1' && k <= '5') {
+    sortToBin(parseInt(k,10)-1);
+  } else if (k === 'a' || k === 'A') { camYaw -= 0.1; camYaw = Math.max(-0.7, camYaw); }
+  else if (k === 'd' || k === 'D') { camYaw += 0.1; camYaw = Math.min(0.7, camYaw); }
+}
+
+// ---------- Game loop ----------
+function animate() {
+  requestAnimationFrame(animate);
+  // Cap dt agar timer tidak melompat saat tab tidak aktif, tapi tetap akurat pada fps rendah
+  const dt = Math.min(0.1, clock.getDelta());
+
+  // rotasi awan & langit
+  if (skyMesh) skyMesh.rotation.y += dt*0.01;
+
+  // putar item aktif & melayang
+  if (activeItem && !activeItem.userData.flying) {
+    activeItem.rotation.y += dt*1.2;
+    activeItem.position.y = 1.7 + Math.sin(performance.now()*0.003)*0.12;
+  }
+
+  // hover tong (highlight ringan)
+  for (const b of bins) {
+    b.children.forEach(c => {
+      if (c.material && c.material.emissive) {
+        // janganubah yang sprite
+        if (c.isMesh && c.material.emissiveIntensity !== undefined) {
+          // tetap, tidak terlalu mencolok
+        }
+      }
+    });
+    b.position.y = Math.sin(performance.now()*0.002 + b.userData.index)*0.02;
+  }
+
+  // partikel
+  updateParticles(dt);
+
+  // kamera: posisi dasar + orbit + shake
+  if (cameraShake > 0) {
+    camera.position.x = Math.sin(camYaw)*camBase.dist + (Math.random()-0.5)*cameraShake*0.4;
+    camera.position.y = camBase.y + (Math.random()-0.5)*cameraShake*0.4;
+    camera.position.z = Math.cos(camYaw)*camBase.dist + (Math.random()-0.5)*cameraShake*0.4;
+    camera.lookAt(0, 1.2, 0.5);
+    cameraShake = Math.max(0, cameraShake - dt*1.8);
+  } else {
+    camera.position.x = Math.sin(camYaw)*camBase.dist;
+    camera.position.y = camBase.y;
+    camera.position.z = Math.cos(camYaw)*camBase.dist;
+    camera.lookAt(0, 1.2, 0.5);
+  }
+
+  // logika permainan
+  if (State.running) {
+    State.timeLeft -= dt;
+    State.difficultyTimer += dt;
+    // tingkatkan kesulitan tiap 8 detik
+    if (State.difficultyTimer > 8) {
+      State.difficultyTimer = 0;
+      State.spawnInterval = Math.max(State.minSpawn, State.spawnInterval - 0.25);
+    }
+
+    // Manajemen spawn item:
+    // - Jika tidak ada item aktif, tunggu delay singkat lalu spawn baru
+    //   (delay ini memberi waktu animasi fly-item selesai & jeda napas pemain)
+    // - Jika item aktif & idle (tidak terbang), cek timeout unanswered
+    if (!activeItem) {
+      State.timeSinceSpawn += dt;
+      if (State.timeSinceSpawn >= 0.3) {   // jeda singkat antar item
+        State.timeSinceSpawn = 0;
+        spawnItem();
+      }
+    } else if (!activeItem.userData.flying) {
+      const age = (performance.now() - activeItem.userData.spawnTime)/1000;
+      // batas waktu per item menurun seiring kesulitan
+      const limit = Math.max(3.0, State.spawnInterval*1.6);
+      if (age > limit) {
+        handleUnanswered();
+        State.timeSinceSpawn = 0.55; // langsung menuju spawn berikutnya
+      }
+    }
+    // cek waktu habis
+    if (State.timeLeft <= 0) {
+      State.timeLeft = 0;
+      gameOver();
+    }
+    updateHUD();
+  }
+
+  renderer.render(scene, camera);
+}
+
+// ---------- Resize handler ----------
+function onResize() {
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+// ---------- Cleanup helper ----------
+function disposeObject(obj) {
+  obj.traverse(child => {
+    if (child.geometry) child.geometry.dispose();
+    if (child.material) {
+      if (Array.isArray(child.material)) child.material.forEach(m => disposeMaterial(m));
+      else disposeMaterial(child.material);
+    }
+  });
+}
+function disposeMaterial(m) {
+  if (m.map) m.map.dispose();
+  m.dispose();
+}
+
+// ---------- Inisialisasi & event binding ----------
+function init() {
+  try {
+    initScene();
+  } catch (e) {
+    console.error('Init scene error:', e);
+    $('loader').innerHTML = '<div style="text-align:center;color:#fff;padding:20px;">Gagal memuat Three.js.<br>Pastikan koneksi internet aktif untuk memuat library dari CDN.</div>';
+    return;
+  }
+
+  // event
+  $('start-btn').addEventListener('click', () => { ensureAudio(); restartGame(); });
+  $('restart-btn').addEventListener('click', () => { ensureAudio(); restartGame(); });
+
+  canvas.addEventListener('pointerdown', onPointerDown);
+  window.addEventListener('pointermove', onPointerMove);
+  window.addEventListener('pointerup', onPointerUp);
+  window.addEventListener('keydown', onKeyDown);
+  window.addEventListener('resize', onResize);
+
+  // sembunyikan loader
+  $('loader').classList.add('hidden');
+
+  // Expose ke window untuk debugging/eksternal (opsional, tidak ada efek samping)
+  window.scene = scene;
+  window.camera = camera;
+  window.renderer = renderer;
+  window.bins = bins;
+  window.State = State;
+
+  // mulai render loop
+  animate();
+}
+
+// ---------- Boot ----------
+window.addEventListener('DOMContentLoaded', () => {
+  // tunggu Three.js terload
+  function boot() {
+    if (typeof THREE === 'undefined') {
+      // coba lagi 100ms
+      setTimeout(boot, 100);
+      return;
+    }
+    init();
+  }
+  boot();
+});
+</script>
+</body>
+</html>
